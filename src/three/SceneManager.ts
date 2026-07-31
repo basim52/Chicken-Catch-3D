@@ -482,6 +482,69 @@ export class SceneManager {
     }
   }
 
+  // Spawn 3D speech bubble sprite ("💬 ضجااااااج!") directly above the chicken
+  public spawnSpeechBubble(text: string, colorHex: string, pos: { x: number; y: number; z: number }) {
+    const canvas = document.createElement('canvas');
+    canvas.width = 380;
+    canvas.height = 180;
+    const ctx = canvas.getContext('2d');
+    if (ctx) {
+      // 1. Draw Comic Speech Bubble
+      const x = 12, y = 12, w = 356, h = 110, r = 24;
+
+      // Drop shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.beginPath();
+      ctx.roundRect(x + 4, y + 4, w, h, r);
+      ctx.fill();
+
+      // Bubble background & stroke
+      ctx.fillStyle = '#FFFFFF';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 8;
+
+      ctx.beginPath();
+      ctx.moveTo(x + r, y);
+      ctx.lineTo(x + w - r, y);
+      ctx.quadraticCurveTo(x + w, y, x + w, y + r);
+      ctx.lineTo(x + w, y + h - r);
+      ctx.quadraticCurveTo(x + w, y + h, x + w - r, y + h);
+      // Pointer Tail pointing down at chicken
+      ctx.lineTo(w / 2 + 25, y + h);
+      ctx.lineTo(w / 2, y + h + 38);
+      ctx.lineTo(w / 2 - 25, y + h);
+      ctx.lineTo(x + r, y + h);
+      ctx.quadraticCurveTo(x, y + h, x, y + h - r);
+      ctx.lineTo(x, y + r);
+      ctx.quadraticCurveTo(x, y, x + r, y);
+      ctx.closePath();
+
+      ctx.fill();
+      ctx.stroke();
+
+      // 2. Bubble Text
+      ctx.fillStyle = colorHex;
+      ctx.font = 'black 48px system-ui, -apple-system, sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(text, w / 2 + 10, y + h / 2);
+    }
+
+    const texture = new THREE.CanvasTexture(canvas);
+    const spriteMat = new THREE.SpriteMaterial({ map: texture, transparent: true });
+    const sprite = new THREE.Sprite(spriteMat);
+    sprite.position.set(pos.x, pos.y + 1.4, pos.z);
+    sprite.scale.set(2.2, 1.1, 1);
+
+    this.floatingTextGroup.add(sprite);
+    this.floatingTexts.push({
+      mesh: sprite,
+      velocity: new THREE.Vector3(0, 1.5, 0),
+      life: 0,
+      maxLife: 1.2,
+    });
+  }
+
   // Spawn 3D text notification (+10, +30, ESCAPED)
   public spawnFloatingText(text: string, colorHex: string, pos: { x: number; y: number; z: number }) {
     const canvas = document.createElement('canvas');

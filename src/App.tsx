@@ -48,7 +48,7 @@ export default function App() {
   return (
     <div
       dir={language === 'ar' ? 'rtl' : 'ltr'}
-      className="relative w-screen h-screen bg-slate-950 overflow-hidden font-sans select-none"
+      className="fixed inset-0 w-full h-[100dvh] bg-slate-950 overflow-hidden font-sans select-none touch-none"
     >
       {/* 3D WebGL Canvas Layer */}
       <GameCanvas

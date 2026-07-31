@@ -71,11 +71,20 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     if (clickedChickenId) {
       const result = onChickenClick(clickedChickenId);
       if (result) {
-        // Trigger feather explosion & floating score text
+        // Trigger feather explosion
         sceneManagerRef.current.spawnFeatherBurst(result.pos, result.type);
+        
+        // Spawn 3D Chicken Speech Bubble: "ضجااااااج!"
+        sceneManagerRef.current.spawnSpeechBubble('💬 ضجااااااج!', '#D97706', result.pos);
+
+        // Floating score label slightly above chicken
         const textLabel = result.points >= 0 ? `+${result.points}` : `${result.points}`;
         const colorHex = result.points > 20 ? '#FFD700' : result.points < 0 ? '#FF0000' : '#FFFFFF';
-        sceneManagerRef.current.spawnFloatingText(textLabel, colorHex, result.pos);
+        sceneManagerRef.current.spawnFloatingText(textLabel, colorHex, {
+          x: result.pos.x,
+          y: result.pos.y + 0.6,
+          z: result.pos.z,
+        });
       }
     } else {
       onMissClick();
