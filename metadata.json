@@ -1,0 +1,6 @@
+{
+  "name": "Chicken Catch 3D",
+  "description": "An interactive 3D WebGL game where players catch running chickens before they reach the cage, featuring audio effects, power-ups, and multiple difficulty levels.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
