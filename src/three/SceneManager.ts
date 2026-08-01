@@ -46,11 +46,11 @@ export class SceneManager {
     // 2. Camera
     this.camera = new THREE.PerspectiveCamera(
       60,
-      container.clientWidth / container.clientHeight,
+      container.clientWidth / Math.max(1, container.clientHeight),
       0.1,
       200
     );
-    this.updateCameraPosition('default');
+    this.applyCameraForAspect();
 
     // 3. Renderer
     this.renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
@@ -309,17 +309,44 @@ export class SceneManager {
 
   public updateCameraPosition(mode: CameraViewMode) {
     this.currentCameraMode = mode;
-    if (mode === 'top_down') {
-      this.camera.position.set(0, 16, 0.1);
+    this.applyCameraForAspect();
+  }
+
+  public applyCameraForAspect() {
+    const width = this.container ? this.container.clientWidth : window.innerWidth;
+    const height = this.container ? this.container.clientHeight : window.innerHeight;
+    const aspect = width / Math.max(1, height);
+
+    this.camera.aspect = aspect;
+
+    if (this.currentCameraMode === 'top_down') {
+      this.camera.fov = aspect < 1.0 ? 75 : 60;
+      this.camera.position.set(0, aspect < 1.0 ? 20 : 16, 0.1);
       this.camera.lookAt(0, 0, 0);
-    } else if (mode === 'close') {
-      this.camera.position.set(0, 5, 6);
+    } else if (this.currentCameraMode === 'close') {
+      this.camera.fov = aspect < 1.0 ? 68 : 55;
+      if (aspect < 1.0) {
+        this.camera.position.set(0.5, 7, 8);
+      } else {
+        this.camera.position.set(0, 5, 6);
+      }
       this.camera.lookAt(1, 0.5, -2);
     } else {
-      // Default angle
-      this.camera.position.set(0, 8, 10);
-      this.camera.lookAt(1, 0.5, -2);
+      // Default view mode
+      if (aspect < 1.0) {
+        // Mobile portrait mode: Elevate & pull back camera + increase FOV so full farm & coop on right fit
+        this.camera.fov = 72;
+        this.camera.position.set(0.5, 11, 13.5);
+        this.camera.lookAt(1.2, 0.5, -1.8);
+      } else {
+        // Landscape / Desktop mode
+        this.camera.fov = 60;
+        this.camera.position.set(0, 8, 10);
+        this.camera.lookAt(1, 0.5, -2);
+      }
     }
+
+    this.camera.updateProjectionMatrix();
   }
 
   // Update logic called on every render frame
@@ -588,6 +615,9 @@ export class SceneManager {
     let closestChickenId: string | null = null;
     let minDistance = Infinity;
 
+    // Radius tolerance for touch input on mobile screens
+    const touchToleranceRadius = megaNetActive ? 2.2 : 0.85;
+
     this.chickenMeshes.forEach((meshGroup, id) => {
       if (!meshGroup.group.visible) return;
 
@@ -597,12 +627,12 @@ export class SceneManager {
           minDistance = intersects[0].distance;
           closestChickenId = id;
         }
-      } else if (megaNetActive) {
-        // Enlarged click hit box for Mega Net powerup
+      } else {
+        // Fallback distance check to make touch tapping generous on mobile screens
         const chickenPos = meshGroup.group.position;
         const ray = this.raycaster.ray;
         const dist = ray.distanceToPoint(chickenPos);
-        if (dist < 1.8 && dist < minDistance) {
+        if (dist < touchToleranceRadius && dist < minDistance) {
           minDistance = dist;
           closestChickenId = id;
         }
@@ -617,10 +647,8 @@ export class SceneManager {
     const width = this.container.clientWidth;
     const height = this.container.clientHeight;
 
-    this.camera.aspect = width / height;
-    this.camera.updateProjectionMatrix();
-
     this.renderer.setSize(width, height);
+    this.applyCameraForAspect();
   };
 
   public dispose() {
