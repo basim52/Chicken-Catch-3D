@@ -3,6 +3,7 @@ import { useChickenGame } from './hooks/useChickenGame';
 import { GameCanvas } from './components/GameCanvas';
 import { HUD } from './components/HUD';
 import { StartMenu } from './components/StartMenu';
+import { LandingPage } from './components/LandingPage';
 import { CrosshairOverlay } from './components/CrosshairOverlay';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
 import { GameOverModal } from './components/GameOverModal';
@@ -87,6 +88,18 @@ export default function App() {
         </>
       )}
 
+      {/* Landing Page */}
+      {gameState === 'landing' && (
+        <LandingPage
+          language={language}
+          progression={progression}
+          onStartPlay={() => startGame('campaign', 'medium', progression.maxUnlockedLevel)}
+          onOpenLevelPicker={() => setGameState('menu')}
+          onToggleLanguage={handleToggleLanguage}
+          onUpdateProgression={updateProgressionData}
+        />
+      )}
+
       {/* Start Menu */}
       {gameState === 'menu' && (
         <StartMenu
@@ -96,6 +109,7 @@ export default function App() {
           onStart={(mode, diff, startLevel) => startGame(mode, diff, startLevel || 1)}
           onToggleLanguage={handleToggleLanguage}
           onUpdateProgression={updateProgressionData}
+          onGoLanding={() => setGameState('landing')}
         />
       )}
 

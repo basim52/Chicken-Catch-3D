@@ -80,7 +80,7 @@ export const ShopModal: React.FC<ShopModalProps> = ({
             <span className="text-xs font-bold text-slate-300">{isAr ? 'رصيدك الحالي من النقاط:' : 'Your Total Points:'}</span>
           </div>
           <div className="flex items-center gap-1 font-mono font-black text-amber-300 text-lg bg-amber-500/10 px-3 py-1 rounded-xl border border-amber-500/30">
-            <span>{progression.totalScore.toLocaleString()}</span>
+            <span>{(progression?.totalScore || 0).toLocaleString()}</span>
             <span className="text-xs font-sans text-amber-400">{isAr ? 'نقطة' : 'pts'}</span>
           </div>
         </div>

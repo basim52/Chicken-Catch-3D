@@ -1,4 +1,4 @@
-export type GameState = 'menu' | 'playing' | 'paused' | 'level_complete' | 'game_over';
+export type GameState = 'landing' | 'menu' | 'playing' | 'paused' | 'level_complete' | 'game_over';
 
 export type GameMode = 'campaign' | 'endless';
 

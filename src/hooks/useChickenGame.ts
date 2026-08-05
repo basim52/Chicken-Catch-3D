@@ -25,7 +25,7 @@ const COOP_TARGET = { x: 5, y: 0.5, z: -4 };
 const CORN_DECOY_TARGET = { x: 0, y: 0.5, z: 1 };
 
 export function useChickenGame() {
-  const [gameState, setGameState] = useState<GameState>('menu');
+  const [gameState, setGameState] = useState<GameState>('landing');
   const [gameMode, setGameMode] = useState<GameMode>('campaign');
   const [difficulty, setDifficulty] = useState<Difficulty>('medium');
   const [language, setLanguage] = useState<Language>('ar');

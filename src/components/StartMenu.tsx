@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Play, Flame, Trophy, Globe, ShieldAlert, Sparkles, Crosshair, Volume2, Info, ChevronRight, Layers, Target, Award, Lock, ShoppingBag } from 'lucide-react';
+import { Play, Flame, Trophy, Globe, ShieldAlert, Sparkles, Crosshair, Volume2, Info, ChevronRight, Layers, Target, Award, Lock, ShoppingBag, Home } from 'lucide-react';
 import { GameMode, Difficulty, Language } from '../types';
 import { ProgressionData } from '../utils/progression';
 import { AchievementsModal } from './AchievementsModal';
@@ -14,6 +14,7 @@ interface StartMenuProps {
   onStart: (mode: GameMode, diff: Difficulty, startLevel?: number) => void;
   onToggleLanguage: () => void;
   onUpdateProgression?: (updated: ProgressionData) => void;
+  onGoLanding?: () => void;
 }
 
 export const StartMenu: React.FC<StartMenuProps> = ({
@@ -23,6 +24,7 @@ export const StartMenu: React.FC<StartMenuProps> = ({
   onStart,
   onToggleLanguage,
   onUpdateProgression,
+  onGoLanding,
 }) => {
   const isAr = language === 'ar';
   const [selectedDiff, setSelectedDiff] = useState<Difficulty>('medium');
@@ -103,6 +105,16 @@ export const StartMenu: React.FC<StartMenuProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5 flex-wrap justify-end">
+            {onGoLanding && (
+              <button
+                onClick={onGoLanding}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-extrabold text-[11px] border border-slate-700 transition-all active:scale-95"
+              >
+                <Home className="w-3.5 h-3.5 text-amber-400" />
+                <span>{isAr ? 'الهبوط 🏠' : 'Landing'}</span>
+              </button>
+            )}
+
             <button
               onClick={() => setShowShop(true)}
               className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-gradient-to-r from-emerald-500/20 to-teal-500/20 hover:from-emerald-500/30 hover:to-teal-500/30 text-emerald-300 font-extrabold text-[11px] border border-emerald-500/40 transition-all active:scale-95 shadow-sm"
