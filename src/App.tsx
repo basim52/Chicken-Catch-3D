@@ -3,6 +3,7 @@ import { useChickenGame } from './hooks/useChickenGame';
 import { GameCanvas } from './components/GameCanvas';
 import { HUD } from './components/HUD';
 import { StartMenu } from './components/StartMenu';
+import { CrosshairOverlay } from './components/CrosshairOverlay';
 import { LevelCompleteModal } from './components/LevelCompleteModal';
 import { GameOverModal } from './components/GameOverModal';
 import { PauseModal } from './components/PauseModal';
@@ -20,6 +21,10 @@ export default function App() {
     stats,
     powerUps,
     levelConfig,
+    progression,
+    updateProgressionData,
+    newlyUnlocked,
+    levelScoreBreakdown,
     startGame,
     nextLevel,
     activatePowerUp,
@@ -56,34 +61,41 @@ export default function App() {
         megaNetActive={powerUps.megaNet.active}
         cornDecoyPos={powerUps.cornDecoy.active ? powerUps.cornDecoy.pos : null}
         cameraView={cameraView}
+        equippedWeapon={progression.equippedWeapon}
+        equippedLaser={progression.equippedLaser}
         onChickenClick={catchChicken}
         onMissClick={registerMissClick}
       />
 
-      {/* In-Game HUD overlay when playing */}
+      {/* In-Game HUD overlay & Scope Reticle when playing */}
       {gameState === 'playing' && (
-        <HUD
-          stats={stats}
-          powerUps={powerUps}
-          maxEscapes={levelConfig.allowedEscapes}
-          cameraView={cameraView}
-          language={language}
-          onActivatePowerUp={activatePowerUp}
-          onPause={() => setGameState('paused')}
-          onToggleCamera={handleToggleCamera}
-          onToggleLanguage={handleToggleLanguage}
-          isMuted={isMuted}
-          onToggleMute={handleToggleMute}
-        />
+        <>
+          <CrosshairOverlay cameraView={cameraView} />
+          <HUD
+            stats={stats}
+            powerUps={powerUps}
+            maxEscapes={levelConfig.allowedEscapes}
+            cameraView={cameraView}
+            language={language}
+            onActivatePowerUp={activatePowerUp}
+            onPause={() => setGameState('paused')}
+            onToggleCamera={handleToggleCamera}
+            onToggleLanguage={handleToggleLanguage}
+            isMuted={isMuted}
+            onToggleMute={handleToggleMute}
+          />
+        </>
       )}
 
       {/* Start Menu */}
       {gameState === 'menu' && (
         <StartMenu
           highScore={stats.highScore}
+          progression={progression}
           language={language}
-          onStart={(mode, diff) => startGame(mode, diff)}
+          onStart={(mode, diff, startLevel) => startGame(mode, diff, startLevel || 1)}
           onToggleLanguage={handleToggleLanguage}
+          onUpdateProgression={updateProgressionData}
         />
       )}
 
@@ -107,6 +119,9 @@ export default function App() {
         <LevelCompleteModal
           stats={stats}
           language={language}
+          scoreBreakdown={levelScoreBreakdown}
+          newlyUnlocked={newlyUnlocked}
+          maxUnlockedLevel={progression.maxUnlockedLevel}
           onNextLevel={nextLevel}
           onReplayLevel={() => startGame('campaign', 'medium')}
           onHome={() => {

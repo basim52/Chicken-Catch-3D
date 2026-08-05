@@ -13,6 +13,13 @@ import {
 } from '../types';
 import { CHICKEN_SPECS } from '../three/Chicken3D';
 import { soundManager } from '../audio/soundManager';
+import {
+  loadProgression,
+  saveProgressionData,
+  evaluateAchievements,
+  ProgressionData,
+  Achievement,
+} from '../utils/progression';
 
 const COOP_TARGET = { x: 5, y: 0.5, z: -4 };
 const CORN_DECOY_TARGET = { x: 0, y: 0.5, z: 1 };
@@ -24,13 +31,22 @@ export function useChickenGame() {
   const [language, setLanguage] = useState<Language>('ar');
   const [cameraView, setCameraView] = useState<CameraViewMode>('default');
 
+  const [progression, setProgression] = useState<ProgressionData>(() => loadProgression());
+  const [newlyUnlocked, setNewlyUnlocked] = useState<Achievement[]>([]);
+  const [levelScoreBreakdown, setLevelScoreBreakdown] = useState<{
+    baseScore: number;
+    accuracyBonus: number;
+    perfectBonus: number;
+    totalEarned: number;
+  }>({ baseScore: 0, accuracyBonus: 0, perfectBonus: 0, totalEarned: 0 });
+
   const [chickens, setChickens] = useState<ChickenData[]>([]);
   const chickensRef = useRef<ChickenData[]>([]);
   chickensRef.current = chickens;
 
   const [stats, setStats] = useState<GameStats>({
     score: 0,
-    highScore: parseInt(localStorage.getItem('chicken_catch_highscore') || '0', 10),
+    highScore: progression.highScore,
     level: 1,
     chickensCaught: 0,
     chickensEscaped: 0,
@@ -42,6 +58,8 @@ export function useChickenGame() {
     totalClicks: 0,
     successfulClicks: 0,
   });
+
+  const falconCaughtRef = useRef<boolean>(false);
 
   const [powerUps, setPowerUps] = useState<PowerUpState>({
     freeze: { active: false, cooldown: 0, durationRemaining: 0 },
@@ -55,22 +73,70 @@ export function useChickenGame() {
 
   // Generate configuration based on level & difficulty
   const getLevelConfig = useCallback((level: number, diff: Difficulty): LevelConfig => {
-    const speedMult = diff === 'easy' ? 0.8 : diff === 'hard' ? 1.3 : 1.0;
-    const baseCount = 3 + level * 2;
+    const levelNum = Math.min(Math.max(1, level), 100);
+    const speedMult = (diff === 'easy' ? 0.8 : diff === 'hard' ? 1.3 : 1.0) * (1 + (levelNum - 1) * 0.012);
+    const baseCount = Math.min(25, 4 + Math.floor(levelNum * 0.22));
     const allowedEscapes = diff === 'easy' ? 5 : diff === 'hard' ? 2 : 3;
 
-    let types: ChickenType[] = ['NORMAL'];
-    if (level >= 2) types.push('GOLDEN');
-    if (level >= 3) types.push('NINJA');
-    if (level >= 4) types.push('ROOSTER');
-    if (level >= 5) types.push('BOMB');
+    let stageNumber = 1;
+    let stageTitleAr = 'المرحلة 1: مزرعة الدجاج والطيور الداجنة';
+    let stageTitleEn = 'Stage 1: Farmyard Birds';
+    let stageIcon = '🐔';
+    let types: ChickenType[] = [];
+
+    if (levelNum <= 25) {
+      // Stage 1: Farmyard Birds (1 - 25)
+      stageNumber = 1;
+      stageTitleAr = 'المرحلة 1: مزرعة الدجاج والطيور الداجنة';
+      stageTitleEn = 'Stage 1: Farmyard Birds';
+      stageIcon = '🐔';
+      types = ['NORMAL'];
+      if (levelNum >= 3) types.push('GOLDEN');
+      if (levelNum >= 6) types.push('DUCK');
+      if (levelNum >= 10) types.push('ROOSTER');
+      if (levelNum >= 15) types.push('TURKEY');
+      if (levelNum >= 20) types.push('BOMB');
+    } else if (levelNum <= 50) {
+      // Stage 2: Wild Forest Birds (26 - 50)
+      stageNumber = 2;
+      stageTitleAr = 'المرحلة 2: غابة الطيور البرية والفرير';
+      stageTitleEn = 'Stage 2: Wild Forest Birds';
+      stageIcon = '🦆';
+      types = ['DUCK', 'PIGEON', 'PHEASANT'];
+      if (levelNum >= 30) types.push('TURKEY');
+      if (levelNum >= 35) types.push('EAGLE');
+      if (levelNum >= 40) types.push('NINJA');
+      if (levelNum >= 45) types.push('BOMB');
+    } else if (levelNum <= 75) {
+      // Stage 3: Wild Animals Safari (51 - 75)
+      stageNumber = 3;
+      stageTitleAr = 'المرحلة 3: محمية الطرائد والحيوانات البرية';
+      stageTitleEn = 'Stage 3: Wild Animals Safari';
+      stageIcon = '🦊';
+      types = ['RABBIT', 'FOX'];
+      if (levelNum >= 55) types.push('PHEASANT');
+      if (levelNum >= 60) types.push('DEER');
+      if (levelNum >= 65) types.push('EAGLE');
+      if (levelNum >= 70) types.push('BOMB');
+    } else {
+      // Stage 4: Legendary Masters Hunt (76 - 100)
+      stageNumber = 4;
+      stageTitleAr = 'المرحلة 4: تحدي الصيد الأسطوري الشامل';
+      stageTitleEn = 'Stage 4: Legendary Masters Hunt';
+      stageIcon = '🦅';
+      types = ['FALCON', 'DEER', 'FOX', 'EAGLE', 'NINJA', 'GOLDEN', 'BOMB'];
+    }
 
     return {
-      levelNumber: level,
-      targetScore: level * 100,
-      chickenCount: Math.min(baseCount, 25),
+      levelNumber: levelNum,
+      stageNumber,
+      stageTitleAr,
+      stageTitleEn,
+      stageIcon,
+      targetScore: levelNum * 120,
+      chickenCount: baseCount,
       allowedEscapes,
-      spawnInterval: Math.max(0.6, 2.2 - level * 0.15),
+      spawnInterval: Math.max(0.5, 2.2 - (levelNum % 25) * 0.05),
       typesAllowed: types,
       speedMultiplier: speedMult,
     };
@@ -79,16 +145,16 @@ export function useChickenGame() {
   const [levelConfig, setLevelConfig] = useState<LevelConfig>(getLevelConfig(1, 'medium'));
 
   // Start a new game
-  const startGame = useCallback((mode: GameMode = 'campaign', diff: Difficulty = 'medium') => {
+  const startGame = useCallback((mode: GameMode = 'campaign', diff: Difficulty = 'medium', startLevelNum: number = 1) => {
     setGameMode(mode);
     setDifficulty(diff);
-    const initialConfig = getLevelConfig(1, diff);
+    const initialConfig = getLevelConfig(startLevelNum, diff);
     setLevelConfig(initialConfig);
 
     setStats({
       score: 0,
       highScore: parseInt(localStorage.getItem('chicken_catch_highscore') || '0', 10),
-      level: 1,
+      level: startLevelNum,
       chickensCaught: 0,
       chickensEscaped: 0,
       goldenCaught: 0,
@@ -127,16 +193,31 @@ export function useChickenGame() {
     soundManager.playVictory();
   }, [stats.level, difficulty, getLevelConfig]);
 
+  const updateProgressionData = useCallback((updated: ProgressionData) => {
+    setProgression(updated);
+  }, []);
+
   // Spawn chicken helper
   const spawnChicken = useCallback(() => {
     const types = levelConfig.typesAllowed;
+    const hasGoldenMagnet = progression.unlockedItems.includes('golden_magnet');
+
     const typeWeights = types.map((t) => {
-      if (t === 'NORMAL') return 50;
-      if (t === 'GOLDEN') return 20;
+      if (t === 'NORMAL') return 40;
+      if (t === 'GOLDEN') return hasGoldenMagnet ? 35 : 20;
       if (t === 'NINJA') return 15;
-      if (t === 'ROOSTER') return 10;
+      if (t === 'ROOSTER') return 15;
       if (t === 'BOMB') return 12;
-      return 10;
+      if (t === 'DUCK') return 25;
+      if (t === 'PIGEON') return 20;
+      if (t === 'PHEASANT') return 18;
+      if (t === 'TURKEY') return 15;
+      if (t === 'EAGLE') return 12;
+      if (t === 'RABBIT') return 25;
+      if (t === 'FOX') return 18;
+      if (t === 'DEER') return 15;
+      if (t === 'FALCON') return hasGoldenMagnet ? 20 : 10;
+      return 15;
     });
 
     const totalWeight = typeWeights.reduce((a, b) => a + b, 0);
@@ -249,7 +330,12 @@ export function useChickenGame() {
         const isCombo = timeSinceLastClick < 1200;
         const newCombo = isCombo ? prevStats.comboCount + 1 : 1;
         const comboMult = Math.min(Math.floor(newCombo / 3) + 1, 4);
-        const earnedPoints = res.points > 0 ? res.points * comboMult : res.points;
+
+        let perkMultiplier = 1;
+        if (progression.equippedWeapon === 'golden_rifle') perkMultiplier *= 1.15;
+        if (progression.unlockedItems.includes('score_booster')) perkMultiplier *= 1.25;
+
+        const earnedPoints = res.points > 0 ? Math.round(res.points * comboMult * perkMultiplier) : res.points;
         const newScore = Math.max(0, prevStats.score + earnedPoints);
         const newHighScore = Math.max(prevStats.highScore, newScore);
 
@@ -263,6 +349,8 @@ export function useChickenGame() {
         else if (res.type === 'ROOSTER') soundManager.playRoosterCrow();
         else if (res.type === 'BOMB') soundManager.playBombHit();
         else soundManager.playCatch();
+
+        if (res.type === 'FALCON') falconCaughtRef.current = true;
 
         return {
           ...prevStats,
@@ -429,6 +517,32 @@ export function useChickenGame() {
 
         if (allSpawned && allFinished && chickensRef.current.length > 0) {
           if (stats.chickensEscaped < levelConfig.allowedEscapes) {
+            // Calculate score bonuses
+            const baseScore = stats.score;
+            const accuracyBonus = Math.round(stats.accuracy * 2);
+            const perfectBonus = stats.chickensEscaped === 0 ? 150 : 0;
+            const totalEarned = baseScore + accuracyBonus + perfectBonus;
+
+            setLevelScoreBreakdown({
+              baseScore,
+              accuracyBonus,
+              perfectBonus,
+              totalEarned,
+            });
+
+            // Evaluate achievements & progression persistence
+            const { updatedData, newlyUnlocked: unlockedNow } = evaluateAchievements(
+              progression,
+              stats.level,
+              totalEarned,
+              stats.accuracy,
+              stats.maxCombo,
+              stats.goldenCaught,
+              falconCaughtRef.current
+            );
+
+            setProgression(updatedData);
+            setNewlyUnlocked(unlockedNow);
             setGameState('level_complete');
           }
         }
@@ -454,6 +568,10 @@ export function useChickenGame() {
     stats,
     powerUps,
     levelConfig,
+    progression,
+    updateProgressionData,
+    newlyUnlocked,
+    levelScoreBreakdown,
     startGame,
     nextLevel,
     activatePowerUp,

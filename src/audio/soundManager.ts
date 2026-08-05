@@ -382,6 +382,76 @@ class SoundManager {
     });
   }
 
+  // Realistic Hunting Rifle Gunshot Sound Effect
+  public playGunshot() {
+    if (this.isMuted) return;
+    this.initCtx();
+    if (!this.ctx) return;
+
+    const t = this.ctx.currentTime;
+
+    // 1. Initial Explosive Blast (White Noise Burst)
+    const bufferSize = this.ctx.sampleRate * 0.15;
+    const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate);
+    const output = buffer.getChannelData(0);
+    for (let i = 0; i < bufferSize; i++) {
+      output[i] = Math.random() * 2 - 1;
+    }
+
+    const whiteNoise = this.ctx.createBufferSource();
+    whiteNoise.buffer = buffer;
+
+    const noiseFilter = this.ctx.createBiquadFilter();
+    noiseFilter.type = 'lowpass';
+    noiseFilter.frequency.setValueAtTime(3000, t);
+    noiseFilter.frequency.exponentialRampToValueAtTime(400, t + 0.12);
+
+    const noiseGain = this.ctx.createGain();
+    noiseGain.gain.setValueAtTime(0.8, t);
+    noiseGain.gain.exponentialRampToValueAtTime(0.001, t + 0.14);
+
+    whiteNoise.connect(noiseFilter);
+    noiseFilter.connect(noiseGain);
+    noiseGain.connect(this.ctx.destination);
+    whiteNoise.start(t);
+
+    // 2. Heavy Sub-Bass Punch (Rifle Blast Thud)
+    const subOsc = this.ctx.createOscillator();
+    const subGain = this.ctx.createGain();
+
+    subOsc.type = 'triangle';
+    subOsc.frequency.setValueAtTime(160, t);
+    subOsc.frequency.exponentialRampToValueAtTime(35, t + 0.18);
+
+    subGain.gain.setValueAtTime(0.7, t);
+    subGain.gain.exponentialRampToValueAtTime(0.001, t + 0.2);
+
+    subOsc.connect(subGain);
+    subGain.connect(this.ctx.destination);
+    subOsc.start(t);
+    subOsc.stop(t + 0.21);
+
+    // 3. Metallic Shell Eject / Mechanical Cocking Click (0.1s delay)
+    setTimeout(() => {
+      if (this.isMuted || !this.ctx) return;
+      const t2 = this.ctx.currentTime;
+      const clickOsc = this.ctx.createOscillator();
+      const clickGain = this.ctx.createGain();
+
+      clickOsc.type = 'square';
+      clickOsc.frequency.setValueAtTime(1800, t2);
+      clickOsc.frequency.exponentialRampToValueAtTime(600, t2 + 0.04);
+
+      clickGain.gain.setValueAtTime(0.2, t2);
+      clickGain.gain.exponentialRampToValueAtTime(0.001, t2 + 0.04);
+
+      clickOsc.connect(clickGain);
+      clickGain.connect(this.ctx.destination);
+      clickOsc.start(t2);
+      clickOsc.stop(t2 + 0.05);
+    }, 100);
+  }
+
   // Game over sound
   public playGameOver() {
     if (this.isMuted) return;

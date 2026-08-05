@@ -6,7 +6,21 @@ export type Difficulty = 'easy' | 'medium' | 'hard';
 
 export type Language = 'ar' | 'en';
 
-export type ChickenType = 'NORMAL' | 'GOLDEN' | 'NINJA' | 'ROOSTER' | 'BOMB';
+export type ChickenType =
+  | 'NORMAL'
+  | 'GOLDEN'
+  | 'NINJA'
+  | 'ROOSTER'
+  | 'BOMB'
+  | 'DUCK'
+  | 'PIGEON'
+  | 'PHEASANT'
+  | 'TURKEY'
+  | 'EAGLE'
+  | 'RABBIT'
+  | 'FOX'
+  | 'DEER'
+  | 'FALCON';
 
 export interface ChickenSpec {
   type: ChickenType;
@@ -19,6 +33,7 @@ export interface ChickenSpec {
   scale: number;
   zigzag: boolean;
   isDanger: boolean;
+  category?: 'bird' | 'animal' | 'legendary';
 }
 
 export interface ChickenData {
@@ -39,6 +54,10 @@ export interface ChickenData {
 
 export interface LevelConfig {
   levelNumber: number;
+  stageNumber: number; // 1, 2, 3, 4
+  stageTitleAr: string;
+  stageTitleEn: string;
+  stageIcon: string;
   targetScore: number;
   chickenCount: number;
   allowedEscapes: number;

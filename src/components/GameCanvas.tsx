@@ -7,6 +7,8 @@ interface GameCanvasProps {
   megaNetActive: boolean;
   cornDecoyPos: { x: number; y: number; z: number } | null;
   cameraView: CameraViewMode;
+  equippedWeapon?: string;
+  equippedLaser?: string;
   onChickenClick: (id: string) => { caught: boolean; type: string; points: number; pos: { x: number; y: number; z: number } } | null;
   onMissClick: () => void;
 }
@@ -16,6 +18,8 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
   megaNetActive,
   cornDecoyPos,
   cameraView,
+  equippedWeapon = 'classic_rifle',
+  equippedLaser = 'red_laser',
   onChickenClick,
   onMissClick,
 }) => {
@@ -29,6 +33,10 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     const manager = new SceneManager(containerRef.current);
     sceneManagerRef.current = manager;
 
+    if (equippedWeapon && equippedLaser) {
+      manager.updateEquippedCosmetics(equippedWeapon, equippedLaser);
+    }
+
     return () => {
       manager.dispose();
       sceneManagerRef.current = null;
@@ -41,6 +49,13 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
       sceneManagerRef.current.updateCameraPosition(cameraView);
     }
   }, [cameraView]);
+
+  // Sync Equipped Weapon & Laser
+  useEffect(() => {
+    if (sceneManagerRef.current) {
+      sceneManagerRef.current.updateEquippedCosmetics(equippedWeapon, equippedLaser);
+    }
+  }, [equippedWeapon, equippedLaser]);
 
   // Animation render loop
   useEffect(() => {
@@ -62,9 +77,39 @@ export const GameCanvas: React.FC<GameCanvasProps> = ({
     return () => cancelAnimationFrame(animId);
   }, [chickens, cornDecoyPos]);
 
+  // Global window pointer & touch listener for continuous rifle tracking
+  useEffect(() => {
+    const handlePointerMove = (e: PointerEvent) => {
+      if (sceneManagerRef.current) {
+        sceneManagerRef.current.updatePointerPosition(e.clientX, e.clientY);
+      }
+    };
+
+    const handleTouchMove = (e: TouchEvent) => {
+      if (e.touches.length > 0 && sceneManagerRef.current) {
+        sceneManagerRef.current.updatePointerPosition(e.touches[0].clientX, e.touches[0].clientY);
+      }
+    };
+
+    window.addEventListener('pointermove', handlePointerMove);
+    window.addEventListener('pointerdown', handlePointerMove);
+    window.addEventListener('touchmove', handleTouchMove, { passive: true });
+    window.addEventListener('touchstart', handleTouchMove, { passive: true });
+
+    return () => {
+      window.removeEventListener('pointermove', handlePointerMove);
+      window.removeEventListener('pointerdown', handlePointerMove);
+      window.removeEventListener('touchmove', handleTouchMove);
+      window.removeEventListener('touchstart', handleTouchMove);
+    };
+  }, []);
+
   // Click & Touch Raycasting Handler
   const handlePointerDown = (e: React.PointerEvent<HTMLDivElement>) => {
     if (!sceneManagerRef.current) return;
+
+    // Trigger Hunter Rifle Shot (recoil, gunshot blast sound, muzzle flash & smoke)
+    sceneManagerRef.current.triggerRifleShoot();
 
     const clickedChickenId = sceneManagerRef.current.checkClick(e.clientX, e.clientY, megaNetActive);
 
